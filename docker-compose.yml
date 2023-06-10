@@ -5,14 +5,15 @@ services:
     depends_on:
       - mongodb
     build: .
+    hostname: users
     env_file:
       - .env
     image: micro-appoint-users
     container_name: users-backend
     networks:
-      - users-net
+      - micro-appoint-net
     ports:
-      - 8080:8080
+      - 50053:50051
     volumes:
       - .:/app
 
@@ -21,9 +22,9 @@ services:
     container_name: users-db
     restart: always
     networks:
-      - users-net
+      - micro-appoint-net
     ports:
-      - 27017:27017
+      - 27019:27017
     environment:
       - MONGO_INITDB_ROOT_USERNAME=${DB_USER}
       - MONGO_INITDB_ROOT_PASSWORD=${DB_PASSWORD}
@@ -38,7 +39,7 @@ volumes:
   db-config:
     driver: local
 
-
 networks:
-  users-net:
-    driver: bridge
+  micro-appoint-net:
+    name: micro-appoint-net
+    external: true
