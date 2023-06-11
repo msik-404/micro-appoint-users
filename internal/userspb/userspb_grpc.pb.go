@@ -23,13 +23,14 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ApiClient interface {
+	FindOneCustomer(ctx context.Context, in *CustomerRequest, opts ...grpc.CallOption) (*CustomerReply, error)
+	FindOneOwner(ctx context.Context, in *OwnerRequest, opts ...grpc.CallOption) (*OwnerReply, error)
 	FindOneCustomerCredentials(ctx context.Context, in *CustomerCredentialsRequest, opts ...grpc.CallOption) (*CredentialsReply, error)
 	FindOneOwnerCredentials(ctx context.Context, in *OwnerCredentialsRequest, opts ...grpc.CallOption) (*CredentialsReply, error)
-	FindManyOwnerCompanies(ctx context.Context, in *OwnerCompaniesRequest, opts ...grpc.CallOption) (*OwnerCompaniesReply, error)
 	AddCustomer(ctx context.Context, in *AddCustomerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	AddOwner(ctx context.Context, in *AddOwnerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	AddOwnerCompany(ctx context.Context, in *AddOwnerCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	DeleteOwnerCompany(ctx context.Context, in *DeleteOwnerCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	AddOwnedCompany(ctx context.Context, in *AddOwnedCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	DeleteOwnedCompany(ctx context.Context, in *DeleteOwnedCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateCustomer(ctx context.Context, in *UpdateCustomerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	UpdateOwner(ctx context.Context, in *UpdateOwnerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	DeleteCustomer(ctx context.Context, in *DeleteCustomerRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
@@ -44,6 +45,24 @@ func NewApiClient(cc grpc.ClientConnInterface) ApiClient {
 	return &apiClient{cc}
 }
 
+func (c *apiClient) FindOneCustomer(ctx context.Context, in *CustomerRequest, opts ...grpc.CallOption) (*CustomerReply, error) {
+	out := new(CustomerReply)
+	err := c.cc.Invoke(ctx, "/userspb.Api/FindOneCustomer", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *apiClient) FindOneOwner(ctx context.Context, in *OwnerRequest, opts ...grpc.CallOption) (*OwnerReply, error) {
+	out := new(OwnerReply)
+	err := c.cc.Invoke(ctx, "/userspb.Api/FindOneOwner", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *apiClient) FindOneCustomerCredentials(ctx context.Context, in *CustomerCredentialsRequest, opts ...grpc.CallOption) (*CredentialsReply, error) {
 	out := new(CredentialsReply)
 	err := c.cc.Invoke(ctx, "/userspb.Api/FindOneCustomerCredentials", in, out, opts...)
@@ -56,15 +75,6 @@ func (c *apiClient) FindOneCustomerCredentials(ctx context.Context, in *Customer
 func (c *apiClient) FindOneOwnerCredentials(ctx context.Context, in *OwnerCredentialsRequest, opts ...grpc.CallOption) (*CredentialsReply, error) {
 	out := new(CredentialsReply)
 	err := c.cc.Invoke(ctx, "/userspb.Api/FindOneOwnerCredentials", in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
-func (c *apiClient) FindManyOwnerCompanies(ctx context.Context, in *OwnerCompaniesRequest, opts ...grpc.CallOption) (*OwnerCompaniesReply, error) {
-	out := new(OwnerCompaniesReply)
-	err := c.cc.Invoke(ctx, "/userspb.Api/FindManyOwnerCompanies", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -89,18 +99,18 @@ func (c *apiClient) AddOwner(ctx context.Context, in *AddOwnerRequest, opts ...g
 	return out, nil
 }
 
-func (c *apiClient) AddOwnerCompany(ctx context.Context, in *AddOwnerCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *apiClient) AddOwnedCompany(ctx context.Context, in *AddOwnedCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/userspb.Api/AddOwnerCompany", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/userspb.Api/AddOwnedCompany", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *apiClient) DeleteOwnerCompany(ctx context.Context, in *DeleteOwnerCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+func (c *apiClient) DeleteOwnedCompany(ctx context.Context, in *DeleteOwnedCompanyRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
 	out := new(emptypb.Empty)
-	err := c.cc.Invoke(ctx, "/userspb.Api/DeleteOwnerCompany", in, out, opts...)
+	err := c.cc.Invoke(ctx, "/userspb.Api/DeleteOwnedCompany", in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -147,13 +157,14 @@ func (c *apiClient) DeleteOwner(ctx context.Context, in *DeleteOwnerRequest, opt
 // All implementations must embed UnimplementedApiServer
 // for forward compatibility
 type ApiServer interface {
+	FindOneCustomer(context.Context, *CustomerRequest) (*CustomerReply, error)
+	FindOneOwner(context.Context, *OwnerRequest) (*OwnerReply, error)
 	FindOneCustomerCredentials(context.Context, *CustomerCredentialsRequest) (*CredentialsReply, error)
 	FindOneOwnerCredentials(context.Context, *OwnerCredentialsRequest) (*CredentialsReply, error)
-	FindManyOwnerCompanies(context.Context, *OwnerCompaniesRequest) (*OwnerCompaniesReply, error)
 	AddCustomer(context.Context, *AddCustomerRequest) (*emptypb.Empty, error)
 	AddOwner(context.Context, *AddOwnerRequest) (*emptypb.Empty, error)
-	AddOwnerCompany(context.Context, *AddOwnerCompanyRequest) (*emptypb.Empty, error)
-	DeleteOwnerCompany(context.Context, *DeleteOwnerCompanyRequest) (*emptypb.Empty, error)
+	AddOwnedCompany(context.Context, *AddOwnedCompanyRequest) (*emptypb.Empty, error)
+	DeleteOwnedCompany(context.Context, *DeleteOwnedCompanyRequest) (*emptypb.Empty, error)
 	UpdateCustomer(context.Context, *UpdateCustomerRequest) (*emptypb.Empty, error)
 	UpdateOwner(context.Context, *UpdateOwnerRequest) (*emptypb.Empty, error)
 	DeleteCustomer(context.Context, *DeleteCustomerRequest) (*emptypb.Empty, error)
@@ -165,14 +176,17 @@ type ApiServer interface {
 type UnimplementedApiServer struct {
 }
 
+func (UnimplementedApiServer) FindOneCustomer(context.Context, *CustomerRequest) (*CustomerReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindOneCustomer not implemented")
+}
+func (UnimplementedApiServer) FindOneOwner(context.Context, *OwnerRequest) (*OwnerReply, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method FindOneOwner not implemented")
+}
 func (UnimplementedApiServer) FindOneCustomerCredentials(context.Context, *CustomerCredentialsRequest) (*CredentialsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindOneCustomerCredentials not implemented")
 }
 func (UnimplementedApiServer) FindOneOwnerCredentials(context.Context, *OwnerCredentialsRequest) (*CredentialsReply, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method FindOneOwnerCredentials not implemented")
-}
-func (UnimplementedApiServer) FindManyOwnerCompanies(context.Context, *OwnerCompaniesRequest) (*OwnerCompaniesReply, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method FindManyOwnerCompanies not implemented")
 }
 func (UnimplementedApiServer) AddCustomer(context.Context, *AddCustomerRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddCustomer not implemented")
@@ -180,11 +194,11 @@ func (UnimplementedApiServer) AddCustomer(context.Context, *AddCustomerRequest) 
 func (UnimplementedApiServer) AddOwner(context.Context, *AddOwnerRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AddOwner not implemented")
 }
-func (UnimplementedApiServer) AddOwnerCompany(context.Context, *AddOwnerCompanyRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method AddOwnerCompany not implemented")
+func (UnimplementedApiServer) AddOwnedCompany(context.Context, *AddOwnedCompanyRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AddOwnedCompany not implemented")
 }
-func (UnimplementedApiServer) DeleteOwnerCompany(context.Context, *DeleteOwnerCompanyRequest) (*emptypb.Empty, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method DeleteOwnerCompany not implemented")
+func (UnimplementedApiServer) DeleteOwnedCompany(context.Context, *DeleteOwnedCompanyRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeleteOwnedCompany not implemented")
 }
 func (UnimplementedApiServer) UpdateCustomer(context.Context, *UpdateCustomerRequest) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateCustomer not implemented")
@@ -209,6 +223,42 @@ type UnsafeApiServer interface {
 
 func RegisterApiServer(s grpc.ServiceRegistrar, srv ApiServer) {
 	s.RegisterService(&Api_ServiceDesc, srv)
+}
+
+func _Api_FindOneCustomer_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CustomerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApiServer).FindOneCustomer(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/userspb.Api/FindOneCustomer",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApiServer).FindOneCustomer(ctx, req.(*CustomerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Api_FindOneOwner_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(OwnerRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ApiServer).FindOneOwner(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/userspb.Api/FindOneOwner",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ApiServer).FindOneOwner(ctx, req.(*OwnerRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Api_FindOneCustomerCredentials_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -243,24 +293,6 @@ func _Api_FindOneOwnerCredentials_Handler(srv interface{}, ctx context.Context, 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(ApiServer).FindOneOwnerCredentials(ctx, req.(*OwnerCredentialsRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
-func _Api_FindManyOwnerCompanies_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(OwnerCompaniesRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(ApiServer).FindManyOwnerCompanies(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/userspb.Api/FindManyOwnerCompanies",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApiServer).FindManyOwnerCompanies(ctx, req.(*OwnerCompaniesRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -301,38 +333,38 @@ func _Api_AddOwner_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Api_AddOwnerCompany_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(AddOwnerCompanyRequest)
+func _Api_AddOwnedCompany_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(AddOwnedCompanyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ApiServer).AddOwnerCompany(ctx, in)
+		return srv.(ApiServer).AddOwnedCompany(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/userspb.Api/AddOwnerCompany",
+		FullMethod: "/userspb.Api/AddOwnedCompany",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApiServer).AddOwnerCompany(ctx, req.(*AddOwnerCompanyRequest))
+		return srv.(ApiServer).AddOwnedCompany(ctx, req.(*AddOwnedCompanyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _Api_DeleteOwnerCompany_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DeleteOwnerCompanyRequest)
+func _Api_DeleteOwnedCompany_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(DeleteOwnedCompanyRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(ApiServer).DeleteOwnerCompany(ctx, in)
+		return srv.(ApiServer).DeleteOwnedCompany(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: "/userspb.Api/DeleteOwnerCompany",
+		FullMethod: "/userspb.Api/DeleteOwnedCompany",
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ApiServer).DeleteOwnerCompany(ctx, req.(*DeleteOwnerCompanyRequest))
+		return srv.(ApiServer).DeleteOwnedCompany(ctx, req.(*DeleteOwnedCompanyRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -417,16 +449,20 @@ var Api_ServiceDesc = grpc.ServiceDesc{
 	HandlerType: (*ApiServer)(nil),
 	Methods: []grpc.MethodDesc{
 		{
+			MethodName: "FindOneCustomer",
+			Handler:    _Api_FindOneCustomer_Handler,
+		},
+		{
+			MethodName: "FindOneOwner",
+			Handler:    _Api_FindOneOwner_Handler,
+		},
+		{
 			MethodName: "FindOneCustomerCredentials",
 			Handler:    _Api_FindOneCustomerCredentials_Handler,
 		},
 		{
 			MethodName: "FindOneOwnerCredentials",
 			Handler:    _Api_FindOneOwnerCredentials_Handler,
-		},
-		{
-			MethodName: "FindManyOwnerCompanies",
-			Handler:    _Api_FindManyOwnerCompanies_Handler,
 		},
 		{
 			MethodName: "AddCustomer",
@@ -437,12 +473,12 @@ var Api_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _Api_AddOwner_Handler,
 		},
 		{
-			MethodName: "AddOwnerCompany",
-			Handler:    _Api_AddOwnerCompany_Handler,
+			MethodName: "AddOwnedCompany",
+			Handler:    _Api_AddOwnedCompany_Handler,
 		},
 		{
-			MethodName: "DeleteOwnerCompany",
-			Handler:    _Api_DeleteOwnerCompany_Handler,
+			MethodName: "DeleteOwnedCompany",
+			Handler:    _Api_DeleteOwnedCompany_Handler,
 		},
 		{
 			MethodName: "UpdateCustomer",

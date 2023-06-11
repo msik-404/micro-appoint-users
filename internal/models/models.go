@@ -13,10 +13,26 @@ import (
 
 type Customer struct {
 	ID        primitive.ObjectID `bson:"_id,omitempty"`
-	Mail      *string            `bson:"mail,omitempty" binding:"max=30"`
-	HashedPwd *string            `bson:"pwd,omitempty"`
-	Name      *string            `bson:"name,omitempty" binding:"max=30"`
-	Surname   *string            `bson:"surname,omitempty" binding:"max=30"`
+	Mail      string             `bson:"mail,omitempty"`
+	HashedPwd string             `bson:"pwd,omitempty"`
+	Name      string             `bson:"name,omitempty"`
+	Surname   string             `bson:"surname,omitempty"`
+}
+
+func FindOneCustomer(
+	ctx context.Context,
+	db *mongo.Database,
+	customerID primitive.ObjectID,
+) *mongo.SingleResult {
+	opts := options.FindOne()
+	opts.SetProjection(bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "pwd", Value: 0},
+	})
+
+	coll := db.Collection(database.CustomersCollName)
+	filter := bson.M{"_id": customerID}
+	return coll.FindOne(ctx, filter, opts)
 }
 
 func FindOneCustomerCredentials(
@@ -53,7 +69,14 @@ func DeleteOneCustomer(
 	return coll.DeleteOne(ctx, filter)
 }
 
-func (customerUpdate *Customer) UpdateOne(
+type CustomerUpdate struct {
+	Mail      *string `bson:"mail,omitempty"`
+	HashedPwd *string `bson:"pwd,omitempty"`
+	Name      *string `bson:"name,omitempty"`
+	Surname   *string `bson:"surname,omitempty"`
+}
+
+func (customerUpdate *CustomerUpdate) UpdateOne(
 	ctx context.Context,
 	db *mongo.Database,
 	customerID primitive.ObjectID,
@@ -65,11 +88,27 @@ func (customerUpdate *Customer) UpdateOne(
 
 type Owner struct {
 	ID        primitive.ObjectID   `bson:"_id,omitempty"`
-	Mail      *string              `bson:"mail,omitempty" binding:"max=30"`
-	HashedPwd *string              `bson:"pwd,omitempty"`
-	Name      *string              `bson:"name,omitempty" binding:"max=30"`
-	Surname   *string              `bson:"surname,omitempty" binding:"max=30"`
+	Mail      string               `bson:"mail,omitempty"`
+	HashedPwd string               `bson:"pwd,omitempty"`
+	Name      string               `bson:"name,omitempty"`
+	Surname   string               `bson:"surname,omitempty"`
 	Companies []primitive.ObjectID `bson:"companies,omitempty"`
+}
+
+func FindOneOwner(
+	ctx context.Context,
+	db *mongo.Database,
+	ownerID primitive.ObjectID,
+) *mongo.SingleResult {
+	opts := options.FindOne()
+	opts.SetProjection(bson.D{
+		{Key: "_id", Value: 0},
+		{Key: "pwd", Value: 0},
+	})
+
+	coll := db.Collection(database.OwnersCollName)
+	filter := bson.M{"_id": ownerID}
+	return coll.FindOne(ctx, filter, opts)
 }
 
 func FindOneOwnerCredentials(
@@ -85,21 +124,6 @@ func FindOneOwnerCredentials(
 
 	coll := db.Collection(database.OwnersCollName)
 	filter := bson.M{"mail": mail}
-	return coll.FindOne(ctx, filter, opts)
-}
-
-func FindOneOwnerCompanies(
-	ctx context.Context,
-	db *mongo.Database,
-	ownerID primitive.ObjectID,
-) *mongo.SingleResult {
-	opts := options.FindOne()
-	opts.SetProjection(bson.D{
-		{Key: "companies", Value: 1},
-	})
-
-	coll := db.Collection(database.OwnersCollName)
-	filter := bson.M{"_id": ownerID}
 	return coll.FindOne(ctx, filter, opts)
 }
 
@@ -143,7 +167,14 @@ func DeleteOneOwner(
 	return coll.DeleteOne(ctx, filter)
 }
 
-func (ownerUpdate *Owner) UpdateOne(
+type OwnerUpdate struct {
+	Mail      *string `bson:"mail,omitempty"`
+	HashedPwd *string `bson:"pwd,omitempty"`
+	Name      *string `bson:"name,omitempty"`
+	Surname   *string `bson:"surname,omitempty"`
+}
+
+func (ownerUpdate *OwnerUpdate) UpdateOne(
 	ctx context.Context,
 	db *mongo.Database,
 	ownerId primitive.ObjectID,

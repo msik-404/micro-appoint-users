@@ -18,26 +18,102 @@ type Server struct {
 	Client mongo.Client
 }
 
-func (s *Server) FindOneCustomerCredentials(
+func (s *Server) FindOneCustomer(
 	ctx context.Context,
-	request *CustomerCredentialsRequest,
-) (*CredentialsReply, error) {
-	mail, err := verifyString(&request.Mail, 30)
+	request *CustomerRequest,
+) (*CustomerReply, error) {
+	customerID, err := primitive.ObjectIDFromHex(request.GetId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	db := s.Client.Database(database.DBName)
-	customerModel := models.Customer{}
-	err = models.FindOneCustomerCredentials(ctx, db, *mail).Decode(&customerModel)
+	type Customer struct {
+		Mail    *string `bson:"mail,omitempty"`
+		Name    *string `bson:"name,omitempty"`
+		Surname *string `bson:"surname,omitempty"`
+	}
+	var result Customer
+	err = models.FindOneCustomer(ctx, db, customerID).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, err
+	}
+	return &CustomerReply{
+		Mail:    result.Mail,
+		Name:    result.Name,
+		Surname: result.Surname,
+	}, nil
+}
+
+func (s *Server) FindOneOwner(
+	ctx context.Context,
+	request *OwnerRequest,
+) (*OwnerReply, error) {
+	ownerID, err := primitive.ObjectIDFromHex(request.GetId())
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	db := s.Client.Database(database.DBName)
+	type Owner struct {
+		Mail      *string              `bson:"mail,omitempty"`
+		Name      *string              `bson:"name,omitempty"`
+		Surname   *string              `bson:"surname,omitempty"`
+		Companies []primitive.ObjectID `bson:"companies,omitempty"`
+	}
+	var result Owner
+	err = models.FindOneOwner(ctx, db, ownerID).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, err
+	}
+	reply := OwnerReply{
+		Mail:    result.Mail,
+		Name:    result.Name,
+		Surname: result.Surname,
+	}
+	for _, id := range result.Companies {
+		reply.Companies = append(reply.Companies, id.Hex())
+	}
+	return &reply, nil
+}
+
+type Credentials struct {
+	ID        primitive.ObjectID `bson:"_id,omitempty"`
+	HashedPwd string             `bson:"pwd,omitempty"`
+}
+
+func (s *Server) FindOneCustomerCredentials(
+	ctx context.Context,
+	request *CustomerCredentialsRequest,
+) (*CredentialsReply, error) {
+	if request.Mail == nil {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"Mail field is required",
+		)
+	}
+	err := verifyString(request.Mail, 30)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	db := s.Client.Database(database.DBName)
+	var result Credentials
+	err = models.FindOneCustomerCredentials(ctx, db, request.GetMail()).Decode(&result)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			return nil, status.Error(codes.NotFound, err.Error())
 		}
 		return nil, status.Error(codes.Internal, err.Error())
 	}
+	customerID := result.ID.Hex()
+    hashedPwd := result.HashedPwd
 	reply := CredentialsReply{
-		Id:        customerModel.ID.Hex(),
-		HashedPwd: customerModel.HashedPwd,
+		Id:        &customerID,
+		HashedPwd: &hashedPwd,
 	}
 	return &reply, nil
 }
@@ -46,52 +122,30 @@ func (s *Server) FindOneOwnerCredentials(
 	ctx context.Context,
 	request *OwnerCredentialsRequest,
 ) (*CredentialsReply, error) {
-	mail, err := verifyString(&request.Mail, 30)
-	if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-	}
-	db := s.Client.Database(database.DBName)
-	ownerModel := models.Owner{}
-	err = models.FindOneOwnerCredentials(ctx, db, *mail).Decode(&ownerModel)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	reply := CredentialsReply{
-		Id:        ownerModel.ID.Hex(),
-		HashedPwd: ownerModel.HashedPwd,
-	}
-	return &reply, nil
-}
-
-func (s *Server) FindManyOwnerCompanies(
-	ctx context.Context,
-	request *OwnerCompaniesRequest,
-) (*OwnerCompaniesReply, error) {
-	ownerID, err := primitive.ObjectIDFromHex(request.Id)
-    if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
-	db := s.Client.Database(database.DBName)
-	ownerModel := models.Owner{}
-	err = models.FindOneOwnerCompanies(ctx, db, ownerID).Decode(&ownerModel)
-	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return nil, status.Error(codes.NotFound, err.Error())
-		}
-		return nil, status.Error(codes.Internal, err.Error())
-	}
-	if len(ownerModel.Companies) == 0 {
+	if request.Mail == nil {
 		return nil, status.Error(
-			codes.NotFound,
-			"This owner does not own any companies",
+			codes.InvalidArgument,
+			"Mail field is required",
 		)
 	}
-	reply := OwnerCompaniesReply{Id: ownerModel.ID.Hex()}
-	for _, companieID := range ownerModel.Companies {
-		reply.Companies = append(reply.Companies, companieID.Hex())
+	err := verifyString(request.Mail, 30)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	db := s.Client.Database(database.DBName)
+	var result Credentials
+	err = models.FindOneOwnerCredentials(ctx, db, request.GetMail()).Decode(&result)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return nil, status.Error(codes.NotFound, err.Error())
+		}
+		return nil, status.Error(codes.Internal, err.Error())
+	}
+	ownerID := result.ID.Hex()
+    hashedPwd := result.HashedPwd
+	reply := CredentialsReply{
+		Id:        &ownerID,
+		HashedPwd: &hashedPwd,
 	}
 	return &reply, nil
 }
@@ -100,7 +154,13 @@ func (s *Server) AddCustomer(
 	ctx context.Context,
 	request *AddCustomerRequest,
 ) (*emptypb.Empty, error) {
-	mail, err := verifyString(&request.Mail, 30)
+	if request.Mail == nil {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"Mail field is required",
+		)
+	}
+	err := verifyString(request.Mail, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -110,19 +170,19 @@ func (s *Server) AddCustomer(
 			"Hashed password field is required",
 		)
 	}
-	name, err := verifyString(request.Name, 30)
+	err = verifyString(request.Name, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	surname, err := verifyString(request.Surname, 30)
+	err = verifyString(request.Surname, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	newCustomer := models.Customer{
-		Mail:      mail,
-		HashedPwd: request.HashedPwd,
-		Name:      name,
-		Surname:   surname,
+		Mail:      request.GetMail(),
+		HashedPwd: request.GetHashedPwd(),
+		Name:      request.GetName(),
+		Surname:   request.GetSurname(),
 	}
 	db := s.Client.Database(database.DBName)
 	_, err = newCustomer.InsertOne(ctx, db)
@@ -136,7 +196,13 @@ func (s *Server) AddOwner(
 	ctx context.Context,
 	request *AddOwnerRequest,
 ) (*emptypb.Empty, error) {
-	mail, err := verifyString(&request.Mail, 30)
+	if request.Mail == nil {
+		return nil, status.Error(
+			codes.InvalidArgument,
+			"Mail field is required",
+		)
+	}
+	err := verifyString(request.Mail, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
@@ -146,19 +212,19 @@ func (s *Server) AddOwner(
 			"Hashed password field is required",
 		)
 	}
-	name, err := verifyString(request.Name, 30)
+	err = verifyString(request.Name, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	surname, err := verifyString(request.Surname, 30)
+	err = verifyString(request.Surname, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	newOwner := models.Owner{
-		Mail:      mail,
-		HashedPwd: request.HashedPwd,
-		Name:      name,
-		Surname:   surname,
+		Mail:      request.GetMail(),
+		HashedPwd: request.GetHashedPwd(),
+		Name:      request.GetName(),
+		Surname:   request.GetSurname(),
 	}
 	db := s.Client.Database(database.DBName)
 	_, err = newOwner.InsertOne(ctx, db)
@@ -170,23 +236,17 @@ func (s *Server) AddOwner(
 
 func (s *Server) AddOwnerCompany(
 	ctx context.Context,
-	request *AddOwnerCompanyRequest,
+	request *AddOwnedCompanyRequest,
 ) (*emptypb.Empty, error) {
-	ownerID, err := primitive.ObjectIDFromHex(request.Id)
-    if err != nil {
+	ownerID, err := primitive.ObjectIDFromHex(request.GetId())
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
-	if request.CompanyId == nil {
-		return nil, status.Error(
-			codes.InvalidArgument,
-			"CompanyID field is required",
-		)
 	}
-	db := s.Client.Database(database.DBName)
-	companyID, err := primitive.ObjectIDFromHex(*request.CompanyId)
-    if err != nil {
+	companyID, err := primitive.ObjectIDFromHex(request.GetCompanyId())
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
+	}
+    db := s.Client.Database(database.DBName)
 	result, err := models.InsertOneOwnerCompany(ctx, db, ownerID, companyID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -201,24 +261,18 @@ func (s *Server) AddOwnerCompany(
 }
 
 func (s *Server) DeleteOwnerCompany(
-    ctx context.Context,
-    request *DeleteOwnerCompanyRequest,
+	ctx context.Context,
+	request *DeleteOwnedCompanyRequest,
 ) (*emptypb.Empty, error) {
-	ownerID, err := primitive.ObjectIDFromHex(request.Id)
-    if err != nil {
+	ownerID, err := primitive.ObjectIDFromHex(request.GetId())
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
-	if request.CompanyId == nil {
-		return nil, status.Error(
-			codes.InvalidArgument,
-			"CompanyID field is required",
-		)
 	}
-	db := s.Client.Database(database.DBName)
-	companyID, err := primitive.ObjectIDFromHex(*request.CompanyId)
-    if err != nil {
+	companyID, err := primitive.ObjectIDFromHex(request.GetCompanyId())
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
+	}
+    db := s.Client.Database(database.DBName)
 	result, err := models.DeleteOneOwnerCompany(ctx, db, ownerID, companyID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
@@ -233,33 +287,33 @@ func (s *Server) DeleteOwnerCompany(
 }
 
 func (s *Server) UpdateCustomer(
-    ctx context.Context,
-    request *UpdateCustomerRequest,
+	ctx context.Context,
+	request *UpdateCustomerRequest,
 ) (*emptypb.Empty, error) {
-	customerID, err := primitive.ObjectIDFromHex(request.Id)
-    if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
-	mail, err := verifyString(request.Mail, 30)
+	customerID, err := primitive.ObjectIDFromHex(request.GetId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	name, err := verifyString(request.Name, 30)
+	err = verifyString(request.Mail, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	surname, err := verifyString(request.Surname, 30)
+	err = verifyString(request.Name, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-    customerUpdate := models.Customer{
-        Mail: mail,
-        HashedPwd: request.HashedPwd,
-        Name: name,
-        Surname: surname,
-    }
+	err = verifyString(request.Surname, 30)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	customerUpdate := models.CustomerUpdate{
+		Mail:      request.Mail,
+		HashedPwd: request.HashedPwd,
+		Name:      request.Name,
+		Surname:   request.Surname,
+	}
 	db := s.Client.Database(database.DBName)
-    result, err := customerUpdate.UpdateOne(ctx, db, customerID)
+	result, err := customerUpdate.UpdateOne(ctx, db, customerID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -273,33 +327,33 @@ func (s *Server) UpdateCustomer(
 }
 
 func (s *Server) UpdateOwner(
-    ctx context.Context,
-    request *UpdateOwnerRequest,
+	ctx context.Context,
+	request *UpdateOwnerRequest,
 ) (*emptypb.Empty, error) {
-	ownerID, err := primitive.ObjectIDFromHex(request.Id)
-    if err != nil {
-		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
-	mail, err := verifyString(request.Mail, 30)
+	ownerID, err := primitive.ObjectIDFromHex(request.GetId())
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	name, err := verifyString(request.Name, 30)
+	err = verifyString(request.Mail, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-	surname, err := verifyString(request.Surname, 30)
+	err = verifyString(request.Name, 30)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
-    ownerUpdate := models.Owner{
-        Mail: mail,
-        HashedPwd: request.HashedPwd,
-        Name: name,
-        Surname: surname,
-    }
+	err = verifyString(request.Surname, 30)
+	if err != nil {
+		return nil, status.Error(codes.InvalidArgument, err.Error())
+	}
+	ownerUpdate := models.OwnerUpdate{
+		Mail:      request.Mail,
+		HashedPwd: request.HashedPwd,
+		Name:      request.Name,
+		Surname:   request.Surname,
+	}
 	db := s.Client.Database(database.DBName)
-    result, err := ownerUpdate.UpdateOne(ctx, db, ownerID)
+	result, err := ownerUpdate.UpdateOne(ctx, db, ownerID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -314,15 +368,15 @@ func (s *Server) UpdateOwner(
 }
 
 func (s *Server) DeleteCustomer(
-    ctx context.Context, 
-    request *DeleteCustomerRequest,
+	ctx context.Context,
+	request *DeleteCustomerRequest,
 ) (*emptypb.Empty, error) {
-	customerID, err := primitive.ObjectIDFromHex(request.Id)
-    if err != nil {
+	customerID, err := primitive.ObjectIDFromHex(request.GetId())
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
+	}
 	db := s.Client.Database(database.DBName)
-    result, err := models.DeleteOneCustomer(ctx, db, customerID)
+	result, err := models.DeleteOneCustomer(ctx, db, customerID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -336,15 +390,15 @@ func (s *Server) DeleteCustomer(
 }
 
 func (s *Server) DeleteOwner(
-    ctx context.Context, 
-    request *DeleteOwnerRequest,
+	ctx context.Context,
+	request *DeleteOwnerRequest,
 ) (*emptypb.Empty, error) {
-	ownerID, err := primitive.ObjectIDFromHex(request.Id)
-    if err != nil {
+	ownerID, err := primitive.ObjectIDFromHex(request.GetId())
+	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, err.Error())
-    }
+	}
 	db := s.Client.Database(database.DBName)
-    result, err := models.DeleteOneCustomer(ctx, db, ownerID)
+	result, err := models.DeleteOneCustomer(ctx, db, ownerID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
