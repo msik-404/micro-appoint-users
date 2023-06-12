@@ -234,7 +234,7 @@ func (s *Server) AddOwner(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *Server) AddOwnerCompany(
+func (s *Server) AddOwnedCompany(
 	ctx context.Context,
 	request *AddOwnedCompanyRequest,
 ) (*emptypb.Empty, error) {
@@ -247,7 +247,7 @@ func (s *Server) AddOwnerCompany(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
     db := s.Client.Database(database.DBName)
-	result, err := models.InsertOneOwnerCompany(ctx, db, ownerID, companyID)
+	result, err := models.InsertOneOwnedCompany(ctx, db, ownerID, companyID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
@@ -260,7 +260,7 @@ func (s *Server) AddOwnerCompany(
 	return &emptypb.Empty{}, nil
 }
 
-func (s *Server) DeleteOwnerCompany(
+func (s *Server) DeleteOwnedCompany(
 	ctx context.Context,
 	request *DeleteOwnedCompanyRequest,
 ) (*emptypb.Empty, error) {
@@ -273,7 +273,7 @@ func (s *Server) DeleteOwnerCompany(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
     db := s.Client.Database(database.DBName)
-	result, err := models.DeleteOneOwnerCompany(ctx, db, ownerID, companyID)
+	result, err := models.DeleteOneOwnedCompany(ctx, db, ownerID, companyID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}

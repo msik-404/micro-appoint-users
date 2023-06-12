@@ -135,7 +135,7 @@ func (owner *Owner) InsertOne(
 	return coll.InsertOne(ctx, owner)
 }
 
-func InsertOneOwnerCompany(
+func InsertOneOwnedCompany(
 	ctx context.Context,
 	db *mongo.Database,
 	ownerID primitive.ObjectID,
@@ -146,7 +146,7 @@ func InsertOneOwnerCompany(
 	return coll.UpdateByID(ctx, ownerID, update)
 }
 
-func DeleteOneOwnerCompany(
+func DeleteOneOwnedCompany(
 	ctx context.Context,
 	db *mongo.Database,
 	ownerID primitive.ObjectID,
