@@ -398,7 +398,7 @@ func (s *Server) DeleteOwner(
 		return nil, status.Error(codes.InvalidArgument, err.Error())
 	}
 	db := s.Client.Database(database.DBName)
-	result, err := models.DeleteOneCustomer(ctx, db, ownerID)
+	result, err := models.DeleteOneOwner(ctx, db, ownerID)
 	if err != nil {
 		return nil, status.Error(codes.Internal, err.Error())
 	}
