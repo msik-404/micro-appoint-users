@@ -14,13 +14,13 @@ RUN go mod download && go mod verify
 COPY . .
 RUN CGO_ENABLED=0 GOOS=linux go build -C ./cmd/users/ -o users 
 
-# Deploy the application binary into a lean image
-# FROM alpine:latest AS build-release-stage
-# WORKDIR /
-# COPY --from=build-stage app/cmd/users/users /users
+#Deploy the application binary into a lean image
+FROM alpine:latest AS build-release-stage
+WORKDIR /
+COPY --from=build-stage app/cmd/users/users /users
 
 EXPOSE 50051 
 
 # Run
-# CMD ["/users"]
-CMD ["./cmd/users/users"]
+CMD ["/users"]
+# CMD ["./cmd/users/users"]
