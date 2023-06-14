@@ -187,6 +187,9 @@ func (s *Server) AddCustomer(
 	db := s.Client.Database(database.DBName)
 	_, err = newCustomer.InsertOne(ctx, db)
 	if err != nil {
+        if mongo.IsDuplicateKeyError(err) {
+		    return nil, status.Error(codes.AlreadyExists, err.Error())
+        }
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &emptypb.Empty{}, nil
@@ -229,6 +232,9 @@ func (s *Server) AddOwner(
 	db := s.Client.Database(database.DBName)
 	_, err = newOwner.InsertOne(ctx, db)
 	if err != nil {
+        if mongo.IsDuplicateKeyError(err) {
+		    return nil, status.Error(codes.AlreadyExists, err.Error())
+        }
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	return &emptypb.Empty{}, nil
@@ -315,6 +321,9 @@ func (s *Server) UpdateCustomer(
 	db := s.Client.Database(database.DBName)
 	result, err := customerUpdate.UpdateOne(ctx, db, customerID)
 	if err != nil {
+        if mongo.IsDuplicateKeyError(err) {
+		    return nil, status.Error(codes.AlreadyExists, err.Error())
+        }
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if result.MatchedCount == 0 {
@@ -355,6 +364,9 @@ func (s *Server) UpdateOwner(
 	db := s.Client.Database(database.DBName)
 	result, err := ownerUpdate.UpdateOne(ctx, db, ownerID)
 	if err != nil {
+        if mongo.IsDuplicateKeyError(err) {
+		    return nil, status.Error(codes.AlreadyExists, err.Error())
+        }
 		return nil, status.Error(codes.Internal, err.Error())
 	}
 	if result.MatchedCount == 0 {
