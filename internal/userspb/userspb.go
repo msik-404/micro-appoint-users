@@ -15,7 +15,7 @@ import (
 
 type Server struct {
 	UnimplementedApiServer
-	Client mongo.Client
+	Client *mongo.Client
 }
 
 func (s *Server) FindOneCustomer(

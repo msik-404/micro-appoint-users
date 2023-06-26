@@ -27,7 +27,7 @@ func main() {
 		panic(err)
 	}
 	s := grpc.NewServer()
-	userspb.RegisterApiServer(s, &userspb.Server{Client: *mongoClient})
+	userspb.RegisterApiServer(s, &userspb.Server{Client: mongoClient})
 	if err := s.Serve(lis); err != nil {
 		panic(err)
 	}
