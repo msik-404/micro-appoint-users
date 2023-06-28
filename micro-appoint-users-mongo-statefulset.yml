@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: micro-appoint-users-mongo-service
+spec:
+  selector:
+    app: micro-appoint-users-mongo
+  ports:
+    - protocol: TCP
+      port: 27017
+      targetPort: 27017
+---
+apiVersion: apps/v1
+kind: StatefulSet 
+metadata:
+  name: micro-appoint-users-mongo-statefulset
+spec:
+  selector:
+    matchLabels:
+      app: micro-appoint-users-mongo 
+  serviceName: micro-appoint-users-mongo-service
+  replicas: 1
+  minReadySeconds: 10
+  template:
+    metadata:
+      labels:
+        app: micro-appoint-users-mongo
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: micro-appoint-users-mongo
+        image: mongo:latest
+        env:
+        - name: MONGO_INITDB_ROOT_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: micro-appoint-users-mongo-secret
+              key: db-user
+        - name: MONGO_INITDB_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: micro-appoint-users-mongo-secret
+              key: db-password
+        - name: MONGO_INITDB_ROOT_DATABASE
+          valueFrom:
+            configMapKeyRef:
+              name: micro-appoint-users-mongo-config
+              key: db-name
+        ports:
+        - containerPort: 27017
+        volumeMounts:
+        - name: micro-appoint-users-pvc
+          mountPath: /data/db
+  volumeClaimTemplates:
+  - metadata:
+      name: micro-appoint-users-pvc
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 1Gi
